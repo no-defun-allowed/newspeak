@@ -167,17 +167,6 @@ public respondToMakeItalic = (
 public rawEditor = (
   ^cm
 )
-public respondToMake: nodeType <String> = (
-  replaceSelectionUsing: [:selection |   
-     | 
-     jsDoc <Alien[Document]> =  retainedPlatform js global at: #document.
-     textToStyle <String> = selection toString.
-     styled = jsDoc createElement: nodeType.
-     |
-     styled at: #innerHTML put: textToStyle.
-     styled
-     ]
-)
 public respondToMake2: nodeType <String> = (
   (* Extract the text from the selection *)
   | 
@@ -394,6 +383,20 @@ public respondToDefineIt = (
   updateGUI: [
      subject document addDefinitionFor: ast from: src.  
   ]
+)
+public respondToMake: nodeType <String> = (
+   |
+   jsDoc <Alien[Document]> = retainedPlatform js global at: #document.
+   range <Alien[Range]> = jsDoc getSelection getRangeAt: 0.
+   styled <Alien[Element]> = jsDoc createElement: nodeType.
+   |
+   styled appendChild: range extractContents.
+   range insertNode: styled.
+  (* force an update of the live view; this will update the raw view to include the changes *)
+  updater value.
+  subject setText: scrubbedLiveViewSource.
+  (* Then force a re-rendering based on the updated raw view to activate the amplet*)
+  updateFromRawView
 )
 ) : (
 public onSubject: os <ObjectSubject> ^ <Instance> = (
