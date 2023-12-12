@@ -254,11 +254,6 @@ public respondToMakeList = (
 (* Insert a ul containing a li node containing the original selection  *)
   respondToMakeList: 'ul'
 )
-extendSelectionToLine: selection = (
-  selection modify: 'move' direction: 'backward' granularity: 'lineboundary'.
-  selection modify: 'extend' direction: 'forward' granularity: 'lineboundary'.
-  ^selection
-)
 public respondToMakeAmplet = (
   makeAmplet: [:ampletName | ampletName]
 )
@@ -470,6 +465,13 @@ public respondToMakeList: nodeType <String> = (
        li appendChild: range extractContents.
        styled
   ]
+)
+extendSelectionToLine: selection = (
+  (selection at: #type) = #Caret ifTrue: [
+    selection modify: 'move' direction: 'backward' granularity: 'lineboundary'.
+    selection modify: 'extend' direction: 'forward' granularity: 'lineboundary'.
+  ].
+  ^selection
 )
 ) : (
 public onSubject: os <ObjectSubject> ^ <Instance> = (
