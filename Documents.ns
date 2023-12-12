@@ -259,22 +259,6 @@ extendSelectionToLine: selection = (
   selection modify: 'extend' direction: 'forward' granularity: 'lineboundary'.
   ^selection
 )
-public respondToMakeList: nodeType <String> = (
-(* Insert a list node containing a li node containing the original selection.
-    It is the caller's reponsibility to pass in a valid list nodeType (either ul or ol).
-*)
-  replaceSelectionUsing: [:selection | 
-       | 
-       jsDoc <Alien[Document]> =  retainedPlatform js global at: #document.
-       textToStyle <String> = (extendSelectionToLine: selection) toString.
-       styled = jsDoc createElement: nodeType.
-       li = jsDoc createElement: 'li'.
-       |
-       styled appendChild: li.
-       li at: #innerHTML put: textToStyle.
-       styled
-  ]
-)
 public respondToMakeAmplet = (
   makeAmplet: [:ampletName | ampletName]
 )
@@ -470,6 +454,22 @@ public respondToMakeItalic = (
 )
 public respondToUnderline = (
   respondToMake: 'U'
+)
+public respondToMakeList: nodeType <String> = (
+(* Insert a list node containing a li node containing the original selection.
+    It is the caller's reponsibility to pass in a valid list nodeType (either ul or ol).
+*)
+  replaceSelectionUsing: [:selection | 
+       | 
+       jsDoc <Alien[Document]> =  retainedPlatform js global at: #document.
+       range <Alien[Range]> = (extendSelectionToLine: selection) getRangeAt: 0.
+       styled = jsDoc createElement: nodeType.
+       li = jsDoc createElement: 'li'.
+       |
+       styled appendChild: li.
+       li appendChild: range extractContents.
+       styled
+  ]
 )
 ) : (
 public onSubject: os <ObjectSubject> ^ <Instance> = (
