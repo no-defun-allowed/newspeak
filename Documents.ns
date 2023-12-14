@@ -354,10 +354,6 @@ public respondToDefineIt = (
      subject document addDefinitionFor: ast from: src.  
   ]
 )
-onChildrenOf: e <Alien[Element]> do: block <[:Alien[Element]]> = (
-  | children <Alien[NodeList]> = e at: #childNodes. |
-  0 to: (children at: #length) - 1 do: [ :i | block value: (children at: i). ]
-)
 removeTag: name <String> fromElement: element <Alien[Element]> = (
   (* Remove all elements with a given tag name from an element. *)
   onChildrenOf: element do: [ :e | removeTag: name fromElement: e. ].
@@ -385,64 +381,6 @@ isElement: element <Alien[Element]> entirelyMadeOf: tagName <String> = (
   (element at: #nodeName) = tagName ifTrue: [^true].
   onChildrenOf: element do: [ :e | (isElement: e entirelyMadeOf: tagName) ifFalse: [^false]. ].
   ^true.
-)
-public respondToMake: nodeType <String> = (
-   |
-   jsDoc <Alien[Document]> = retainedPlatform js global at: #document.
-   range <Alien[Range]> = jsDoc getSelection getRangeAt: 0.
-   contents <Alien[Element]> = jsDoc createElement: #span.
-   |
-   contents appendChild: range extractContents.
-   (isElement: (range at: #commonAncestorContainer) enclosedIn: nodeType) ifTrue: [
-     (* Peel enclosing nodeType *)
-     removeTag: nodeType fromElement: contents.
-     range insertNode: contents.
-     peelTag: nodeType fromElement: contents.
-     replaceElementWithChildren: contents.
-   ] ifFalse: [
-     (* Nothing to peel, but remove nodeType from inside *)
-     (isElement: contents entirelyMadeOf: nodeType) ifTrue: [
-       removeTag: nodeType fromElement: contents.
-       range insertNode: contents.
-       replaceElementWithChildren: contents.
-     ] ifFalse: [
-       (* Add nodeType *)
-       | styled <Alien[Element]> = jsDoc createElement: nodeType. |
-       removeTag: nodeType fromElement: contents.
-       styled appendChild: contents.
-       replaceElementWithChildren: contents.
-       range insertNode: styled.
-     ].
-   ].
-  (* force an update of the live view; this will update the raw view to include the changes *)
-  updater value.
-  subject setText: scrubbedLiveViewSource.
-  (* Then force a re-rendering based on the updated raw view to activate the amplet*)
-  updateFromRawView
-)
-peelTag: name <String> fromElement: element <Alien[Element]> = (
-  | cursor <Alien[Element]> ::= element. grandparent <Alien[Element]> |
-  [
-    |
-    parent <Alien[Element]> = cursor at: #parentNode.
-    grandparent <Alien[Element]> = parent at: #parentNode.
-    right <Alien[Element]> = parent cloneNode: false.
-    |
-    grandparent insertBefore: right before: (parent at: #nextSibling).
-    (* Give the nodes after the element a new parent. *)
-    [ (cursor at: #nextSibling) = nil ] whileFalse: [ right appendChild: (cursor at: #nextSibling) ].
-    (parent at: #nodeName) = name ifTrue: [
-      (* We hit the tag we want to peel off. *)
-      grandparent insertBefore: cursor before: right.
-      ^self.
-    ] ifFalse: [
-      (* Give the cursor its own parent, turning one parent into three. *)
-      | middle <Alien[Element]> = parent cloneNode: false. |
-      grandparent insertBefore: middle before: right.
-      middle appendChild: cursor.
-      cursor:: middle.
-    ]
-  ] repeat.
 )
 public respondToMakeItalic = (
   respondToMake: 'I'
@@ -472,6 +410,98 @@ extendSelectionToLine: selection = (
     selection modify: 'extend' direction: 'forward' granularity: 'lineboundary'.
   ].
   ^selection
+)
+onChildrenOf: e <Alien[Element]> do: block <[:Alien[Element]]> = (
+  |
+  jsChildren <Alien[NodeList]> = e at: #childNodes.
+  children = Array new: (jsChildren at: #length).
+  |
+  0 to: (jsChildren at: #length) - 1 do: [ :i | children at: (i + 1) put: (jsChildren at: i) ].
+  children do: block
+)
+public respondToMake: nodeType <String> = (
+   |
+   jsDoc <Alien[Document]> = retainedPlatform js global at: #document.
+   range <Alien[Range]> = jsDoc getSelection getRangeAt: 0.
+   contents <Alien[Element]> = jsDoc createElement: #span.
+   |
+   contents appendChild: range extractContents.
+   (isElement: (range at: #commonAncestorContainer) enclosedIn: nodeType) ifTrue: [
+     (* Peel enclosing nodeType *)
+     removeTag: nodeType fromElement: contents.
+     range insertNode: contents.
+     cleanUpElement: (peelTag: nodeType fromElement: contents).
+     replaceElementWithChildren: contents.
+   ] ifFalse: [
+     | parent <Alien[Element]> |
+     (* Nothing to peel, but remove nodeType from inside *)
+     (isElement: contents entirelyMadeOf: nodeType) ifTrue: [
+       removeTag: nodeType fromElement: contents.
+       range insertNode: contents.
+       parent:: contents at: #parentNode.
+       replaceElementWithChildren: contents.
+       cleanUpElement: parent.
+     ] ifFalse: [
+       (* Add nodeType *)
+       | styled <Alien[Element]> = jsDoc createElement: nodeType. |
+       removeTag: nodeType fromElement: contents.
+       styled appendChild: contents.
+       range insertNode: styled.
+       replaceElementWithChildren: contents.
+       cleanUpElement: (styled at: #parentNode).
+     ].
+   ].
+  (* force an update of the live view; this will update the raw view to include the changes *)
+  updater value.
+  subject setText: scrubbedLiveViewSource.
+  (* Then force a re-rendering based on the updated raw view to activate the amplet*)
+  updateFromRawView
+)
+cleanUpElement: e <Alien[Element]> = (
+  |
+  nodeName <String> = e at: #nodeName.
+  previous <Alien[Element]> = e at: #previousSibling.
+  |
+  (* Don't touch elements we don't create *)
+  ({"B". "I". "U"} indexOf: nodeName) > 0 ifTrue: [
+    (* Remove empty text children *)
+    e normalize.
+    (* Remove empty nodes *)
+    (e at: #firstChild) = nil ifTrue: [ e remove. ^self ].
+    (* Merge adjacent nodes *)
+    previous = nil ifFalse: [
+      nodeName = (previous at: #nodeName) ifTrue: [
+        [ (e at: #firstChild) = nil ] whileFalse: [ previous appendChild: (e at: #firstChild) ].
+        e remove
+      ]
+    ]
+   ].
+   onChildrenOf: e do: [ :e | cleanUpElement: e ]
+)
+peelTag: name <String> fromElement: element <Alien[Element]> = (
+  | cursor <Alien[Element]> ::= element. grandparent <Alien[Element]> |
+  [
+    |
+    parent <Alien[Element]> = cursor at: #parentNode.
+    grandparent <Alien[Element]> = parent at: #parentNode.
+    right <Alien[Element]> = parent cloneNode: false.
+    |
+    grandparent insertBefore: right before: (parent at: #nextSibling).
+    (* Give the nodes after the element a new parent. *)
+    [ (cursor at: #nextSibling) = nil ] whileFalse: [ right appendChild: (cursor at: #nextSibling) ].
+    (parent at: #nodeName) out.
+    (parent at: #nodeName) = name ifTrue: [
+      (* We hit the tag we want to peel off. *)
+      grandparent insertBefore: cursor before: right.
+      ^grandparent.
+    ] ifFalse: [
+      (* Give the cursor its own parent, turning one parent into three. *)
+      | middle <Alien[Element]> = parent cloneNode: false. |
+      grandparent insertBefore: middle before: right.
+      middle appendChild: cursor.
+      cursor:: middle.
+    ]
+  ] repeat.
 )
 ) : (
 public onSubject: os <ObjectSubject> ^ <Instance> = (
