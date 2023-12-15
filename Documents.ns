@@ -161,60 +161,6 @@ scrubbedLiveViewSource ^ <String> = (
 public rawEditor = (
   ^cm
 )
-public respondToMake2: nodeType <String> = (
-  (* Extract the text from the selection *)
-  | 
-  jsDoc <Alien[Document]> =  retainedPlatform js global at: #document.
-  jsWindow <Alien[Window]> = retainedPlatform js global at: #window.
-  selection <Alien[Selection]> = jsDoc getSelection.
-  textToStyle <String> = selection toString.
-  styled = jsDoc createElement: #span. 
-  s2 <Alien[Selection]>
-  s3 <Alien[Selection]>
-  range <Alien[Range]>
-  r1 <Alien[Range]>
- o1 <Alien[DocumentFragment]>
-  d <Alien[HTMLCollection]>
-  toggle ::= true.
-  |
-  (* No selection. We might warn about this *)
-  (selection at: #type) = #Range ifFalse: [^self]. 
-  (* Here is where we should decide if we need to toggle *)
-  r1:: selection getRangeAt: 0.
-  o1:: r1 extractContents.
-  d:: o1 at: #children.
-  (* go thru all nodes and see if property holds *)
-  0 to: (d at: #length) - 1 do: [:i |  
-     | n = d item: i.  |
-     s3:: jsWindow getComputedStyle: n.
-     toggle printString out.
-     toggle:: toggle and: [(s3 getPropertyValue: 'text-decoration-line' ) = 'underline'].
-     toggle printString out.
-     ].
-  (* then we can decide if our style applies to it; if so we must toggle *)
-  toggle ifTrue: [
-     0 to: (d at: #length) - 1 do: [:i |  
-       | n = d item: i.  |
-       (n at: #style) at: 'text-decoration-line' put: #none.
-     ]. 
-  ] ifFalse: [(styled at: #style) at: 'text-decoration-line' put: #underline].
-    (* Remove the selection *)
-  selection deleteFromDocument.
-  (* Get a new selection, at the point where the selection was.*)
-  s2:: (retainedPlatform js global at: #document) getSelection.
-  range:: s2 getRangeAt: 0.
-  (* replace the selection with the new contents. 
-       First insert a new node.
-  *)
-  range insertNode: styled.
-  (* Then insert revised text into that node *)
-  styled appendChild: o1.
-  (* force an update of the live view; this will update the raw view to include the changes *)
-  updater value.
-  subject setText: scrubbedLiveViewSource.
-  (* Then force a re-rendering based on the updated raw view *)
-  updateFromRawView
-)
 public replaceSelectionUsing: fos <[:Alien[Selection]]> = (
   (* Replace the selection with the result of invoking fos; fos is a function of the selection, which we pass into it so it can compute the replacement *)
   | 
