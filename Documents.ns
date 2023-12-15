@@ -171,7 +171,6 @@ public replaceSelectionUsing: fos <[:Alien[Selection]]> = (
   range <Alien[Range]>
   |
   (* No selection. We might warn about this *)
-  (* What types of selection we support should be specified by the caller. A Caret is okay for making a list, as we will extend the selection, but creates useless style tags. *)
   (selection at: #type) = #None ifTrue: [^self].
   (* compute replacement value based on selection *)
   replacement:: fos value: selection.
