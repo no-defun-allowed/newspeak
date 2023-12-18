@@ -5429,6 +5429,24 @@ public setValue: expression <String> ifCompilerError: compileFailBlock ifError: 
 )
 ) : (
 )
+class ColorView onSubject: s = ProgrammingPresenter onSubject: s (
+) (
+public definition = (
+    ^column: {
+      color: subject objectMirror reflectee
+    }
+)
+public isKindOfColorView = (
+  ^true
+)
+isMyKind: other <Fragment> ^ <Boolean> = (
+  ^other isKindOfColorView
+)
+public title ^ <String> = (
+  ^'Color'
+)
+) : (
+)
 colorizingBlockFor: cm <CodeMirrorFragment> = (
       cm resetStyles.
 	^[:r | | style <Alien[JSObject]> = JSObject new. |
@@ -5653,23 +5671,6 @@ cssConversionTable ^ <Map[Symbol, String]> = (
 		at: #rightBrace5 put: magentaBold;
 		yourself
 )
-initializeObjectViews = (
-(*
-Set up custom views for various types. 
-
-This needs to be generalized. One shouldn't need to edit the IDE to set up custom views. 
-*)
-  objectViews 
-    at: 'isKindOfInteger' put: {IntegerView};
-    at: 'isKindOfArray' put: {};
-    at: 'isKindOfString' put: {StringView};
-    at: 'isKindOfList' put: {KeysAndValuesView};
-    at: 'isKindOfMap' put: {KeysAndValuesView};
-    at: 'isKindOfSet' put: {SetView};
-    at: 'isKindOfImage' put: {ImageView. JSAlienView};
-    at: 'isKindOfClosure' put: {ClosureView} ;
-    at: 'isKindOfJSAlien' put: {JSAlienView}   
-)
 public addObjectViews: vs <{Presenter}> forKind: k <String> = (
   objectViews at: k put: vs
 )
@@ -5685,6 +5686,24 @@ exemplarForFactory: factorySelector <Symbol> ^ <String | Nil>
   factorySelector = #usingPlatform:testFramework: ifTrue: [^' usingPlatform: platform testFramework: ide minitest'].
   factorySelector = #usingPlatform:ide: ifTrue: [^' usingPlatform: platform ide: ide'].  
   ^nil
+)
+initializeObjectViews = (
+(*
+Set up custom views for various types. 
+
+This needs to be generalized. One shouldn't need to edit the IDE to set up custom views. 
+*)
+  objectViews 
+    at: 'isKindOfInteger' put: {IntegerView};
+    at: 'isKindOfArray' put: {};
+    at: 'isKindOfString' put: {StringView};
+    at: 'isKindOfList' put: {KeysAndValuesView};
+    at: 'isKindOfMap' put: {KeysAndValuesView};
+    at: 'isKindOfSet' put: {SetView};
+    at: 'isKindOfImage' put: {ImageView. JSAlienView};
+    at: 'isKindOfClosure' put: {ClosureView} ;
+    at: 'isKindOfJSAlien' put: {JSAlienView} ;
+    at: 'isKindOfColor' put: {ColorView}
 )
 ) : (
 )

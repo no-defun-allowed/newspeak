@@ -3140,6 +3140,9 @@ updateVisualsFromSameKind: oldPresenter <Self> ^ <Alien[Element]> = (
   substance updateVisualsFrom: oldPresenter substance.
   ^replaceVisual: oldPresenter visual with: substance visual
 )
+color: color = (
+  ^StaticColorFragment color: color
+)
 ) : (
 )
 class RowComposer definitions: fs <List[Fragment]> = SequenceComposer definitions: fs (
@@ -4262,6 +4265,32 @@ public helpSection ^ <HolderFragment> = (
 public new ^ <Instance> = (
   ^contentBlock: [textDisplay: 'No help text defined for this presenter. Sorry.']
 )
+)
+class StaticColorFragment color: c = LeafFragment (
+	|
+	color = c.
+    element <Alien[Element]>
+	|) (
+public isKindOfStaticColorFragment = (
+  ^true
+)
+isMyKind: f <Fragment> ^ <Boolean> = (
+  ^f isKindOfStaticColorFragment
+)
+createVisual = (
+    | element = document createElement: 'span'. |
+    (element at: 'style')
+      setProperty: 'background' to: color asCSSString;
+      setProperty: 'width' to: '3em'.
+    element at: 'innerHTML' put: '&nbsp'.
+    ^element
+)
+updateVisualsFromSameKind: oldFragment <Fragment> ^ <Alien[Element]> = (
+  | oldVisual = oldFragment visual. |
+  (oldVisual at: 'style') setProperty: 'color' to: color asCSSString.
+  ^oldVisual
+)
+) : (
 )
 public CodeMirror = (
   ^window at: 'CodeMirror'.
